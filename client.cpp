@@ -80,10 +80,16 @@ void ProcessPacket(char* Packet)
 
 	}
 
+	system("cls");
 	for (auto Player : PlayerList)
 	{
-		cout << "Player ID : " << Player.second->MySocket << " : "
-			<< Player.second->X << ", " << Player.second->Y << endl;
+		COORD Cur;
+		Cur.X = Player.second->X;
+		Cur.Y = Player.second->Y;
+		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Cur);
+		cout << Player.second->MySocket << endl;
+	//	cout << "Player ID : " << Player.second->MySocket << " : "
+		//	<< Player.second->X << ", " << Player.second->Y << endl;
 	}
 }
 
@@ -98,7 +104,7 @@ unsigned WINAPI WorkThread(void* Arg)
 	while (true)
 	{
 		int RecvBytes = recv(ServerSocket, Data, sizeof(Data), 0);
-		cout << "RecvBytes : " << RecvBytes << endl;
+		//cout << "RecvBytes : " << RecvBytes << endl;
 		if (RecvBytes <= 0)
 		{
 			//¼­¹ö¶û ²÷±è
