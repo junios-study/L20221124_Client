@@ -5,6 +5,7 @@
 #include <process.h>
 #include <Windows.h>
 #include <map>
+#include <conio.h>
 #include "MessagePacket.h"
 #include "PlayerData.h"
 
@@ -16,41 +17,60 @@ using namespace std;
 //		2			8		  4         4
 //  Code	   SOCKET_ID      X         Y
 //[][]    [][][][][][][][]  [][][][] [][][][]
+//0       2                 10       14
 char Data[18] = { 0, };
 
 map<SOCKET, PlayerData*> PlayerList;
 
+SOCKET MySocketID = 0L;
 
 
 void ProcessPacket(char* Packet)
 {
 	unsigned short Code = 0;
 	memcpy(&Code, &Data[0], sizeof(Code));
-	SOCKET SendID = 0;
-	memcpy(&SendID, &Data[2], sizeof(SendID));
+	SOCKET FromID = 0;
+	memcpy(&FromID, &Data[2], sizeof(FromID));
 
 	Code = ntohs(Code);
-	SendID = ntohll(SendID);
+	FromID = ntohll(FromID);
 	PlayerData* NewPlayer = nullptr;
 	switch ((MessagePacket)Code)
 	{
 		case MessagePacket::S2C_RegisterID:
 //			cout << "MessagePacket::S2C_RegisterID " << endl;
 			NewPlayer = new PlayerData();
-			NewPlayer->MySocket = SendID;
-			PlayerList[SendID] = NewPlayer;
+			NewPlayer->MySocket = FromID;
+			MySocketID = FromID;
+			PlayerList[FromID] = NewPlayer;
 		break;
 
 		case MessagePacket::S2C_Spawn:
 //			cout << "MessagePacket::S2C_Spawn " << endl;
 
 			NewPlayer = new PlayerData();
-			NewPlayer->MySocket = SendID;
-			PlayerList[SendID] = NewPlayer;
+			NewPlayer->MySocket = FromID;
+			PlayerList[FromID] = NewPlayer;
 		break;
 
 		case MessagePacket::S2C_Destroy:
-			PlayerList.erase(PlayerList.find(SendID));
+			PlayerList.erase(PlayerList.find(FromID));
+		break;
+
+		case MessagePacket::S2C_Move:
+		{
+			int X;
+			int Y;
+			memcpy(&X, &Data[10], sizeof(X));
+			X = ntohl(X);
+			memcpy(&Y, &Data[14], sizeof(Y));
+			Y = ntohl(Y);
+
+			//update PlayerList
+			auto UpdatePlayer = PlayerList.find(FromID);
+			UpdatePlayer->second->X = X;
+			UpdatePlayer->second->Y = Y;
+		}
 		break;
 
 
@@ -60,10 +80,10 @@ void ProcessPacket(char* Packet)
 
 	}
 
-	cout << "Player Count : " << PlayerList.size() << endl;
 	for (auto Player : PlayerList)
 	{
-		cout << "Player ID : " << Player.second->MySocket;
+		cout << "Player ID : " << Player.second->MySocket << " : "
+			<< Player.second->X << ", " << Player.second->Y << endl;
 	}
 }
 
@@ -117,9 +137,42 @@ int main()
 
 	while (true)
 	{
-		char Message[1024] = { 0, };
-		cin >> Message;
-		int SentBytes = send(ServerSocket, Message, (int)strlen(Message) + 1, 0);
+		int KeyCode = _getch();
+
+		map<SOCKET, PlayerData*>::iterator MyPlayer = PlayerList.find(MySocketID);
+		switch (KeyCode)
+		{
+			case 'W':
+			case 'w':
+				MyPlayer->second->Y--;
+				break;
+
+			case 'S':
+			case 's':
+				MyPlayer->second->Y++;
+				break;
+
+			case 'A':
+			case 'a':
+				MyPlayer->second->X--;
+				break;
+
+			case 'D':
+			case 'd':
+				MyPlayer->second->X++;
+				break;
+		}
+
+		unsigned short Code = htons((unsigned short)MessagePacket::C2S_Move);
+		memcpy(&Data[0], &Code, sizeof(Code));
+		SOCKET SendID = htonll(MyPlayer->second->MySocket);
+		memcpy(&Data[2], &SendID, sizeof(SendID));
+		int Temp = htonl(MyPlayer->second->X);
+		memcpy(&Data[10], &Temp, sizeof(Temp));
+		Temp = htonl(MyPlayer->second->Y);
+		memcpy(&Data[14], &Temp, sizeof(Temp));
+
+		int SentBytes = send(ServerSocket, Data, sizeof(Data), 0);
 	}
 
 	WSACleanup();
