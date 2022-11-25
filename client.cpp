@@ -9,6 +9,11 @@
 #include "MessagePacket.h"
 #include "PlayerData.h"
 
+#include "SDL.h"
+
+#pragma comment(lib, "SDL2main.lib")
+#pragma comment(lib, "SDL2.lib")
+
 
 using namespace std;
 
@@ -120,11 +125,16 @@ unsigned WINAPI WorkThread(void* Arg)
 	return 0;
 }
 
+SDL_Window* MyWindow;
+SDL_Renderer* MyRenderer;
 
-
-
-int main()
+int SDL_main(int agrc, char* argv[])
 {
+	SDL_Init(SDL_INIT_EVERYTHING);
+
+	MyWindow = SDL_CreateWindow("Test", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
+	MyRenderer = SDL_CreateRenderer(MyWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
+
 	WSAData wsaData;
 
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -141,45 +151,63 @@ int main()
 
 	HANDLE WorkHandle = (HANDLE)_beginthreadex(nullptr, 0, WorkThread, (void*)&ServerSocket, 0, nullptr);
 
-	while (true)
-	{
-		int KeyCode = _getch();
+	bool bIsRunning = true;
 
-		map<SOCKET, PlayerData*>::iterator MyPlayer = PlayerList.find(MySocketID);
-		switch (KeyCode)
+	while (bIsRunning)
+	{
+		//Input
+		SDL_Event MyEvent;
+		SDL_PollEvent(&MyEvent);
+		if (MyEvent.type == SDL_QUIT)
 		{
-			case 'W':
-			case 'w':
+			bIsRunning = false;
+		}
+		else if (MyEvent.type == SDL_KEYDOWN)
+		{
+
+			map<SOCKET, PlayerData*>::iterator MyPlayer = PlayerList.find(MySocketID);
+			switch (MyEvent.key.keysym.sym)
+			{
+			case SDLK_w:
 				MyPlayer->second->Y--;
 				break;
 
-			case 'S':
-			case 's':
+			case SDLK_s:
 				MyPlayer->second->Y++;
 				break;
 
-			case 'A':
-			case 'a':
+			case SDLK_a:
 				MyPlayer->second->X--;
 				break;
 
-			case 'D':
-			case 'd':
+			case SDLK_d:
 				MyPlayer->second->X++;
 				break;
+			case SDLK_ESCAPE:
+				bIsRunning = false;
+				break;
+			}
+
+			unsigned short Code = htons((unsigned short)MessagePacket::C2S_Move);
+			memcpy(&Data[0], &Code, sizeof(Code));
+			SOCKET SendID = htonll(MyPlayer->second->MySocket);
+			memcpy(&Data[2], &SendID, sizeof(SendID));
+			int Temp = htonl(MyPlayer->second->X);
+			memcpy(&Data[10], &Temp, sizeof(Temp));
+			Temp = htonl(MyPlayer->second->Y);
+			memcpy(&Data[14], &Temp, sizeof(Temp));
+
+			int SentBytes = send(ServerSocket, Data, sizeof(Data), 0);
 		}
-
-		unsigned short Code = htons((unsigned short)MessagePacket::C2S_Move);
-		memcpy(&Data[0], &Code, sizeof(Code));
-		SOCKET SendID = htonll(MyPlayer->second->MySocket);
-		memcpy(&Data[2], &SendID, sizeof(SendID));
-		int Temp = htonl(MyPlayer->second->X);
-		memcpy(&Data[10], &Temp, sizeof(Temp));
-		Temp = htonl(MyPlayer->second->Y);
-		memcpy(&Data[14], &Temp, sizeof(Temp));
-
-		int SentBytes = send(ServerSocket, Data, sizeof(Data), 0);
 	}
 
+	closesocket(ServerSocket);
+
+	SDL_DestroyRenderer(MyRenderer);
+	SDL_DestroyWindow(MyWindow);
+	SDL_Quit();
+
 	WSACleanup();
+
+	return 0;
 }
