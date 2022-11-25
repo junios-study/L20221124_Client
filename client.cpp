@@ -31,6 +31,11 @@ SOCKET MySocketID = 0L;
 
 SDL_Window* MyWindow;
 SDL_Renderer* MyRenderer;
+SDL_Surface* BackgroudSurface;
+SDL_Texture* BackgroundTexture;
+SDL_Surface* PlayerSurface;
+SDL_Texture* PlayerTexture;
+
 
 
 void ProcessPacket(char* Packet)
@@ -88,28 +93,16 @@ void ProcessPacket(char* Packet)
 
 	}
 
-	//system("cls");
-	//for (auto Player : PlayerList)
-	//{
-	//	COORD Cur;
-	//	Cur.X = Player.second->X;
-	//	Cur.Y = Player.second->Y;
-	//	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Cur);
-	//	cout << Player.second->MySocket << endl;
-	////	cout << "Player ID : " << Player.second->MySocket << " : "
-	//	//	<< Player.second->X << ", " << Player.second->Y << endl;
-	//}
-
-
 	SDL_SetRenderDrawColor(MyRenderer, 0x00, 0x00, 0x00, 0x00);
 	SDL_RenderClear(MyRenderer);
+
+	SDL_RenderCopy(MyRenderer, BackgroundTexture, nullptr, nullptr);
+
 	for (auto Player : PlayerList)
 	{
-		SDL_SetRenderDrawColor(MyRenderer, 0xff, 0x00, 0x00, 0x00);
 		SDL_Rect MyRect = SDL_Rect{ Player.second->X, Player.second->Y,
-			50, 50 };
-		SDL_RenderFillRect(MyRenderer, &MyRect);
-		//SDL_RenderCopy(MyRenderer, PlayerTexture, nullptr, &MyRect);
+			PlayerSurface->w, PlayerSurface->h };
+		SDL_RenderCopy(MyRenderer, PlayerTexture, nullptr, &MyRect);
 	}
 
 	SDL_RenderPresent(MyRenderer);
@@ -150,6 +143,13 @@ int SDL_main(int agrc, char* argv[])
 
 	MyWindow = SDL_CreateWindow("Test", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
 	MyRenderer = SDL_CreateRenderer(MyWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
+
+	BackgroudSurface = SDL_LoadBMP("Data/_Map.bmp");
+	BackgroundTexture = SDL_CreateTextureFromSurface(MyRenderer, BackgroudSurface);
+
+	PlayerSurface = SDL_LoadBMP("Data/Stand_R_01.bmp");
+	SDL_SetColorKey(PlayerSurface, SDL_TRUE, SDL_MapRGB(PlayerSurface->format, 0xff, 0xff, 0xff));
+	PlayerTexture = SDL_CreateTextureFromSurface(MyRenderer, PlayerSurface);
 
 	WSAData wsaData;
 
