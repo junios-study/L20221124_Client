@@ -29,6 +29,9 @@ map<SOCKET, PlayerData*> PlayerList;
 
 SOCKET MySocketID = 0L;
 
+SDL_Window* MyWindow;
+SDL_Renderer* MyRenderer;
+
 
 void ProcessPacket(char* Packet)
 {
@@ -85,17 +88,31 @@ void ProcessPacket(char* Packet)
 
 	}
 
-	system("cls");
+	//system("cls");
+	//for (auto Player : PlayerList)
+	//{
+	//	COORD Cur;
+	//	Cur.X = Player.second->X;
+	//	Cur.Y = Player.second->Y;
+	//	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Cur);
+	//	cout << Player.second->MySocket << endl;
+	////	cout << "Player ID : " << Player.second->MySocket << " : "
+	//	//	<< Player.second->X << ", " << Player.second->Y << endl;
+	//}
+
+
+	SDL_SetRenderDrawColor(MyRenderer, 0x00, 0x00, 0x00, 0x00);
+	SDL_RenderClear(MyRenderer);
 	for (auto Player : PlayerList)
 	{
-		COORD Cur;
-		Cur.X = Player.second->X;
-		Cur.Y = Player.second->Y;
-		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), Cur);
-		cout << Player.second->MySocket << endl;
-	//	cout << "Player ID : " << Player.second->MySocket << " : "
-		//	<< Player.second->X << ", " << Player.second->Y << endl;
+		SDL_SetRenderDrawColor(MyRenderer, 0xff, 0x00, 0x00, 0x00);
+		SDL_Rect MyRect = SDL_Rect{ Player.second->X, Player.second->Y,
+			50, 50 };
+		SDL_RenderFillRect(MyRenderer, &MyRect);
+		//SDL_RenderCopy(MyRenderer, PlayerTexture, nullptr, &MyRect);
 	}
+
+	SDL_RenderPresent(MyRenderer);
 }
 
 
@@ -125,8 +142,7 @@ unsigned WINAPI WorkThread(void* Arg)
 	return 0;
 }
 
-SDL_Window* MyWindow;
-SDL_Renderer* MyRenderer;
+
 
 int SDL_main(int agrc, char* argv[])
 {
