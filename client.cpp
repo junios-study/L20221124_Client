@@ -118,7 +118,14 @@ unsigned WINAPI WorkThread(void* Arg)
 
 	while (true)
 	{
-		int RecvBytes = recv(ServerSocket, Data, sizeof(Data), 0);
+		int RecvBytes = 0;
+		int TotalRecvBytes = 0;
+		do
+		{
+			RecvBytes = recv(ServerSocket, &Data[TotalRecvBytes], sizeof(Data) - TotalRecvBytes, 0);
+			TotalRecvBytes += RecvBytes;
+		} while (TotalRecvBytes < sizeof(Data));
+
 		//cout << "RecvBytes : " << RecvBytes << endl;
 		if (RecvBytes <= 0)
 		{
@@ -180,7 +187,6 @@ int SDL_main(int agrc, char* argv[])
 		}
 		else if (MyEvent.type == SDL_KEYDOWN)
 		{
-
 			map<SOCKET, PlayerData*>::iterator MyPlayer = PlayerList.find(MySocketID);
 			switch (MyEvent.key.keysym.sym)
 			{
@@ -213,7 +219,13 @@ int SDL_main(int agrc, char* argv[])
 			Temp = htonl(MyPlayer->second->Y);
 			memcpy(&Data[14], &Temp, sizeof(Temp));
 
-			int SentBytes = send(ServerSocket, Data, sizeof(Data), 0);
+			int SentBytes = 0;
+			int TotalSentBytes = 0;
+			do
+			{
+				SentBytes = send(ServerSocket, &Data[TotalSentBytes], sizeof(Data) - TotalSentBytes, 0);
+				TotalSentBytes += SentBytes;
+			} while (TotalSentBytes < sizeof(Data));
 		}
 	}
 
